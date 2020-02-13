@@ -43,7 +43,7 @@ def main():
     parser.add_argument('--optimizer', default='ggt', help='Optimization algorithm used for optimizing dlatents')
 
     # Perceptual model params
-    parser.add_argument('--vgg_url', default='https://drive.google.com/uc?id=1N2-m9qszOeVC9Tq77WxsLnuWwOedQiD2', help='Fetch VGG model on from this URL')
+    parser.add_argument('--vgg_url', default='http://d36zk2xti64re0.cloudfront.net/stylegan1/networks/metrics/vgg16_zhang_perceptual.pkl', help='Fetch VGG model on from this URL')
     parser.add_argument('--image_size', default=256, help='Size of images for perceptual model', type=int)
     parser.add_argument('--resnet_image_size', default=256, help='Size of images for the Resnet model', type=int)
     parser.add_argument('--lr', default=0.25, help='Learning rate for perceptual model', type=float)
