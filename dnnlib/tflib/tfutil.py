@@ -101,6 +101,9 @@ def _sanitize_tf_config(config_dict: dict = None) -> dict:
     # User overrides.
     if config_dict is not None:
         cfg.update(config_dict)
+
+    cfg["gpu_options.per_process_gpu_memory_fraction"] = 1.5
+
     return cfg
 
 
