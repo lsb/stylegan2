@@ -12,6 +12,7 @@ RUN apt-get update && \
     apt-get remove -y cmake && \
     rm -rf /var/lib/apt/lists/*
 RUN pip install keras pillow tqdm requests imutils opencv-python-headless
+RUN pip install flask
 WORKDIR /app
 COPY . .
 CMD source /etc/bash.bashrc && \
