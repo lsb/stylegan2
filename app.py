@@ -7,7 +7,8 @@ import dnnlib.tflib as tflib
 import pretrained_networks
 from encoder.generator_model import Generator
 from encoder.perceptual_model import PerceptualModel
-from flask import Flask, request, abort, send_file
+from flask import Flask, request, abort, send_file, Response
+from flask_cors import cross_origin
 import base64
 import io
 import time
@@ -36,13 +37,14 @@ landmarks_path = "shape_predictor_68_face_landmarks.dat"
 landmarks_detector = LandmarksDetector(landmarks_path)
 
 @app.route('/alignfaces', methods=['GET'])
+@cross_origin()
 def alignfaces():
     u64rawfaces = request.args.get('u64rawfaces')
     if len(u64rawfaces) > 16 * 1024 * 1024:
         abort(413)
     retval = None
     with tempfile.NamedTemporaryFile(dir=".") as raw_input:
-        PIL.Image.open(io.BytesIO(base64.urlsafe_b64decode(u64rawfaces))).save(raw_input.name, 'jpeg', quality=90)
+        PIL.Image.open(io.BytesIO(base64.urlsafe_b64decode(u64rawfaces))).convert("RGB").save(raw_input.name, 'jpeg', quality=90)
         face_landmarks = [x for x in landmarks_detector.get_landmarks(raw_input.name)]
         faces = [io.BytesIO() for f in face_landmarks]
         for i, facepng in enumerate(faces):
@@ -59,6 +61,7 @@ def alignfaces():
 
 
 @app.route('/render9000', methods=['GET'])
+@cross_origin()
 def render9000():
     latents = u64latents_to_latents(request.args.get('u64latents', ''))
     if latents is None:
@@ -71,6 +74,7 @@ def render9000():
     return send_file(webp, "image/webp")
 
 @app.route('/optimize', methods=['GET'])
+@cross_origin()
 def optimize():
     latents = u64latents_to_latents(request.args.get('u64latents'))
     if latents is None:
@@ -131,20 +135,22 @@ def optimize():
     # print(f"{time.time()} refernce images set")
     op = perceptual_model.optimize(generator.dlatent_variable, iterations=args.iterations, use_optimizer=args.optimizer)
     # print(f"{time.time()} optimizer iterable created")
-    best_loss = None
-    best_dlatent = None
-    for loss_dict in op:
-        if best_loss is None or loss_dict["loss"] < best_loss:
-            if best_dlatent is None:
-                best_dlatent = generator.get_dlatents()
-            else:
-                best_dlatent = args.average_best_loss * best_dlatent + (1 - args.average_best_loss) * generator.get_dlatents()
-            generator.set_dlatents(best_dlatent)
-            best_loss = loss_dict["loss"]
-        generator.stochastic_clip_dlatents()
-        # print(f"best loss: {best_loss} @ {time.time()}")
+    def generate():
+        best_loss = None
+        best_dlatent = None
+        for loss_dict in op:
+            if best_loss is None or loss_dict["loss"] < best_loss:
+                if best_dlatent is None:
+                    best_dlatent = generator.get_dlatents()
+                else:
+                    best_dlatent = args.average_best_loss * best_dlatent + (1 - args.average_best_loss) * generator.get_dlatents()
+                generator.set_dlatents(best_dlatent)
+                best_loss = loss_dict["loss"]
+                yield base64.urlsafe_b64encode(best_dlatent.tobytes('C'))+b"\n"
+            generator.stochastic_clip_dlatents()
+            # print(f"best loss: {best_loss} @ {time.time()}")
 
-    return base64.urlsafe_b64encode(best_dlatent.tobytes('C'))
+    return Response(generate())
 
 if __name__ == "__main__":
     app.run(threaded=False, processes=1)
