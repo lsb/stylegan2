@@ -65,7 +65,6 @@ def alignfaces():
     return retval
 
 
-
 @app.route('/render9000', methods=['GET'])
 @cross_origin()
 def render9000():
@@ -150,10 +149,12 @@ def optimize():
                     best_dlatent = generator.get_dlatents()
                 else:
                     best_dlatent = args.average_best_loss * best_dlatent + (1 - args.average_best_loss) * generator.get_dlatents()
+                yield base64.urlsafe_b64encode(generator.get_dlatents().tobytes('C'))+b"\n"
                 generator.set_dlatents(best_dlatent)
                 best_loss = loss_dict["loss"]
-                yield base64.urlsafe_b64encode(best_dlatent.tobytes('C'))+b"\n"
             generator.stochastic_clip_dlatents()
+        yield base64.urlsafe_b64encode(best_dlatent.tobytes('C'))+b"\n"
+
             # print(f"best loss: {best_loss} @ {time.time()}")
 
     return Response(generate())
