@@ -17,6 +17,7 @@ import tensorflow as tf
 from ffhq_dataset.face_alignment import image_align
 from ffhq_dataset.landmarks_detector import LandmarksDetector
 import tempfile
+import subprocess
 
 model_url = "gdrive:networks/stylegan2-ffhq-config-f.pkl"
 tflib.init_tf()
@@ -35,6 +36,11 @@ def dict_as_namedtuple(d, name=''):
 
 landmarks_path = "shape_predictor_68_face_landmarks.dat"
 landmarks_detector = LandmarksDetector(landmarks_path)
+
+@app.route('/healthz', methods=['GET'])
+@cross_origin()
+def healthz():
+    return subprocess.run(['nvidia-smi'], stdout=subprocess.PIPE).stdout.decode('utf-8')
 
 @app.route('/alignfaces', methods=['GET'])
 @cross_origin()
