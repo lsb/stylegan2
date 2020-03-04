@@ -1,0 +1,9 @@
+*.leebutterman.com {
+    proxy / localhost:5000-5003 {
+        policy least_conn
+        health_check /healthz
+    }
+    tls {
+        max_certs 10
+    }
+}

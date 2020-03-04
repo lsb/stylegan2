@@ -1,0 +1,52 @@
+{
+    "builders": [{
+        "type": "amazon-ebs",
+        "region": "us-west-2",
+        "subnet_id": "subnet-b302ceca",
+        "instance_type": "g4dn.12xlarge",
+        "ssh_username": "ubuntu",
+        "ami_name": "stylegan2 align-optimize-render-4 {{timestamp}}",
+        "source_ami": "ami-010a96c958f9ee5cf"
+    }],
+    "provisioners": [
+        {
+            "type": "shell",
+            "inline": ["docker version"]
+        },
+        {
+            "type": "shell",
+            "inline": ["docker pull nvidia/cuda", "docker run --gpus all nvidia/cuda nvidia-smi"]
+        },
+        {
+            "type": "file",
+            "source": "Caddyfile-4",
+            "destination": "/home/ubuntu/Caddyfile"
+        },
+        {
+            "type": "file",
+            "source": "stylegan2.container.gz",
+            "destination": "/tmp/x"
+        },
+        {
+            "type": "shell",
+            "inline": ["zcat /tmp/x | docker load"]
+        },
+        {
+            "type": "shell",
+            "inline": [
+                "docker run --net host --restart=unless-stopped -d --gpus device=0 --name gpu0 stylegan2 gunicorn -b 127.0.0.1:5000 --workers 2 --threads 1 -k sync --limit-request-line 0 --limit-request-field_size 0 --timeout 60 --max-requests 1000  app:app",
+                "docker run --net host --restart=unless-stopped -d --gpus device=1 --name gpu1 stylegan2 gunicorn -b 127.0.0.1:5001 --workers 2 --threads 1 -k sync --limit-request-line 0 --limit-request-field_size 0 --timeout 60 --max-requests 1000  app:app",
+                "docker run --net host --restart=unless-stopped -d --gpus device=2 --name gpu2 stylegan2 gunicorn -b 127.0.0.1:5002 --workers 2 --threads 1 -k sync --limit-request-line 0 --limit-request-field_size 0 --timeout 60 --max-requests 1000  app:app",
+                "docker run --net host --restart=unless-stopped -d --gpus device=3 --name gpu3 stylegan2 gunicorn -b 127.0.0.1:5003 --workers 2 --threads 1 -k sync --limit-request-line 0 --limit-request-field_size 0 --timeout 60 --max-requests 1000  app:app"
+            ]
+        },
+        {
+            "type": "shell",
+            "inline": [
+                "docker pull abiosoft/caddy",
+                "docker run --net host --restart=unless-stopped -d --name caddy -e ACME_AGREE=true -v /home/ubuntu/Caddyfile:/etc/Caddyfile -v /home/ubuntu/.caddy:/root/.caddy abiosoft/caddy"
+            ]
+
+        }
+    ]
+}
