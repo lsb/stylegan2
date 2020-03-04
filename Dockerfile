@@ -15,5 +15,7 @@ RUN pip install keras pillow tqdm requests imutils opencv-python-headless
 RUN pip install flask flask-cors gunicorn
 WORKDIR /app
 COPY . .
+ENV FLASK_ENV=production
+RUN mv ./dot-keras ~/.keras
 CMD source /etc/bash.bashrc && \
     jupyter notebook --notebook-dir=. --ip 127.0.0.1 --no-browser --allow-root
